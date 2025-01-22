@@ -337,7 +337,7 @@ def main():
 
                 if not loss.isfinite():
                     logger.warning(f"Loss not finite, skipping backward, loss={loss}")
-                    logger.warning("experience.advantages={experience.advantages}")
+                    logger.warning(f"experience.advantages={experience.advantages}")
                     continue
 
                 loss.backward()
