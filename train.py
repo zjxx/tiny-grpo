@@ -1,8 +1,9 @@
 from collections.abc import Callable
+import json
 from pathlib import Path
 import random
 import re
-from typing import Any, Optional
+from typing import Any, Iterator, Optional
 import wandb
 import torch
 import torch.optim as optim
@@ -17,11 +18,6 @@ from transformers import (
 )
 from loss import approx_kl_divergence, GRPOLoss
 from replay_buffer import ReplayBuffer, Experience, join_experience_batch
-from logging_utils import init_logger
-from utils import read_jsonl
-
-
-logger = init_logger(__name__)
 
 
 def load_model(
@@ -174,6 +170,13 @@ def sequences_log_probs(
     return log_probs
 
 
+def read_jsonl(file_name: str | Path) -> Iterator:
+    file_path = Path(file_name)
+    with file_path.open(mode="r", encoding="utf-8") as f:
+        for line in f:
+            yield json.loads(line)
+
+
 def read_prompts(
     file_name: str,
     predicate: Optional[Callable[[Any], bool]] = None,
@@ -232,7 +235,7 @@ def main():
         and x["num_digits"] <= 3,
         max_rows=64 * 1024,
     )
-    logger.info(f"found {len(prompts)} matching prompts")
+    print(f"found {len(prompts)} matching prompts")
     prompt_loader = DataLoader(
         prompts,
         batch_size=rollouts_per_step,
@@ -270,7 +273,7 @@ def main():
                     top_p=top_p,
                 )
 
-                logger.info(
+                print(
                     f"rollout q='{q}', a='{a}', returns={returns.sum().item():.2f}, replay_buffer_size={len(replay_buffer)}, sequence_ids={sequence_ids.shape}"
                 )
                 rollout_returns.append(returns.cpu())
@@ -308,7 +311,7 @@ def main():
 
         torch.cuda.empty_cache()
         episode_return_sum = torch.stack(rollout_returns).sum()
-        logger.info(f"returns of step {k}: {episode_return_sum:.4f}")
+        print(f"returns of step {k}: {episode_return_sum:.4f}")
         wandb.log({"returns": episode_return_sum})
 
         experience_sampler = DataLoader(
@@ -336,13 +339,13 @@ def main():
                 loss, kl = objective(log_probs=log_probs, experience=exp)
 
                 if not loss.isfinite():
-                    logger.warning(f"Loss not finite, skipping backward, loss={loss}")
-                    logger.warning(f"experience.advantages={experience.advantages}")
+                    print(f"Loss not finite, skipping backward, loss={loss}")
+                    print(f"experience.advantages={experience.advantages}")
                     continue
 
                 loss.backward()
                 grad_norm = clip_grad_norm_(model.parameters(), max_norm=max_norm)
-                logger.info(f"{step_epoch}: kl={kl: .4f}, grad_norm={grad_norm: .4f}")
+                print(f"{step_epoch}: kl={kl: .4f}, grad_norm={grad_norm: .4f}")
                 wandb.log({"kl": kl, "grad_norm": grad_norm})
 
                 optimizer.step()
