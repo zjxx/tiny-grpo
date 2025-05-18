@@ -2,6 +2,11 @@
 
 Goal: Working toy implementation of llama-3.2-3b locally RL training with GRPO. Understanding the algorithm & hyper parameters. Just running everything locally on a single node.
 
+# Change of Fork version
+You should download the dataset from [DAPO-Math-17k](https://huggingface.co/datasets/BytedTsinghua-SIA/DAPO-Math-17k) and  [AIME_2024](https://huggingface.co/datasets/Maxwell-Jia/AIME_2024/tree/main), then put them in the `data` folder.
+
+
+
 ### Setup
 
 1. Create conda env
